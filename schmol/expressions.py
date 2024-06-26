@@ -1,12 +1,13 @@
 import math
 from treelib import Tree
-from typing import List, Union
+from typing import Union
 
 
 class Value:
     """
     Values are organised and connected in a graph (more specifically, a tree). A value is nothing more than a float, 
-    that can be combined with other values or floats via basic mathematical operations. 
+    that can be combined with other values or floats via basic mathematical operations. Value is supposed to be an abstraction 
+    of a scala, storing further information useful for training Neural Networks.
     """
     def __init__(self, data: float, children: tuple['Value'] = (), operator: str = "", label: str ="") -> None:
         self.data: float = data
@@ -40,6 +41,9 @@ class Value:
         out._backprop = _backprop
         return out
     
+    def __radd__(self, other):
+        return self + other
+    
     def __sub__(self, other: 'Value') -> 'Value':
         return self + (-other)
     
@@ -63,7 +67,7 @@ class Value:
         return self * other**(-1)
     
     def __pow__(self, other: Union[int, float]) -> 'Value':
-        assert isinstance(other, (int, float), "currently only supporting int/float powers")
+        assert isinstance(other, int) or isinstance(other, float), "currently only supporting int/float powers"
         out = Value(self.data**other, (self, ), f"**{other}")
 
         def _backprop():
@@ -146,7 +150,7 @@ class Value:
 
         for child in self._prev:
             curr = tree.create_node(tag=child.__repr__(), parent=parent)
-            child.print_tree_recursive(tree, curr)
+            child.cli_print_tree(tree, curr)
         
         if is_new_tree:
             print(tree.show(stdout=False))
