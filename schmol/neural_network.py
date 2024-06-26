@@ -11,10 +11,25 @@ class Module:
         []
 
 
-class Trainable:
-    def train(data, labels):
+class Model(Module):
+
+    def __call__(self, inputs):
         pass
 
+    def train(self, data, labels):
+        for k in range(50):
+            ypred = self.predict(data)
+            loss = sum((yout - ygt)**2 for ygt, yout in zip (labels, ypred))
+            loss.backprop()
+            for p in self.parameters():
+                p.data += -0.01 * p.grad
+            self.zero_grad()
+            print(k, loss.data)
+
+        print(ypred)
+
+    def predict(self, data):
+        return [self(x) for x in data]
 
 class Neuron(Module):
     """
@@ -59,7 +74,7 @@ class Layer(Module):
         return [p for neuron in self.neurons for p in neuron.parameters()]
 
 
-class MLP(Module, Trainable):
+class MLP(Model):
     """
     A MLP is a Multilayer Perceptron https://en.wikipedia.org/wiki/Multilayer_perceptron
     """
@@ -79,4 +94,8 @@ class MLP(Module, Trainable):
     def parameters(self):
         # returns all parameters of each Layer in this MLP
         return [p for layer in self.layers for p in layer.parameters()]
+    
+    def train(self, data, labels):
+        assert len(data[0]) == self.inputs, f"Training data must be a feature vector of size {self.inputs}, but provided data has size {len(data[0])}"
+        super().train(data, labels)
 
