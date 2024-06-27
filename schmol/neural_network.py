@@ -2,6 +2,7 @@ import random
 
 from schmol.expressions import Value
 
+
 class Module:
     def zero_grad(self):
         for p in self.parameters():
@@ -16,20 +17,36 @@ class Model(Module):
     def __call__(self, inputs):
         pass
 
-    def train(self, data, labels):
-        for k in range(50):
-            ypred = self.predict(data)
-            loss = sum((yout - ygt)**2 for ygt, yout in zip (labels, ypred))
-            loss.backprop()
-            for p in self.parameters():
-                p.data += -0.01 * p.grad
-            self.zero_grad()
-            print(k, loss.data)
+    def train(self, data=[], labels=[], iterations=50, batch_size=None, print_loss=False):
+        assert len(data) != 0,           "No training data given"
+        assert len(data) == len(labels), "Length of data and labels is not the same"
+        # split data and it's labels into batches
+        z = list(zip(data, labels))
+        batches = [z[i : i+batch_size] for i in range(0, len(data), batch_size)] if batch_size else [z]
+        # iterate
+        print(f"Training Model on {len(data)} datapoints:")
+        for k in range(iterations):
+            for batch in batches:
+                # get batch predictions
+                predictions = self.predict([b_data for (b_data, _) in batch])
+                # calculate loss
+                loss = sum((pred - actual)**2 for (actual, pred) in zip([b_label for (_, b_label) in batch], predictions))
+                # backpropagate
+                loss.backprop()
+                # tweak Model params
+                for p in self.parameters():
+                    p.data += -0.01 * p.grad
+                # zero grad
+                self.zero_grad()
 
-        print(ypred)
+            if print_loss: 
+                print(k, loss.data)
+            
+        print(f"\nSuccessfully trained model.")
 
-    def predict(self, data):
+    def predict(self, data=[]):
         return [self(x) for x in data]
+
 
 class Neuron(Module):
     """
@@ -98,4 +115,3 @@ class MLP(Model):
     def train(self, data, labels):
         assert len(data[0]) == self.inputs, f"Training data must be a feature vector of size {self.inputs}, but provided data has size {len(data[0])}"
         super().train(data, labels)
-
