@@ -1,6 +1,7 @@
 import random
 
 from schmol.expressions import Value
+from schmol.utils import vector_loss
 
 
 class Module:
@@ -24,13 +25,14 @@ class Model(Module):
         z = list(zip(data, labels))
         batches = [z[i : i+batch_size] for i in range(0, len(data), batch_size)] if batch_size else [z]
         # iterate
-        print(f"Training Model on {len(data)} datapoints:")
+        print(f"Training Model on {len(data)} datapoints for {iterations} iterations:")
         for k in range(iterations):
             for batch in batches:
                 # get batch predictions
+                batch_labels = [b_label for (_, b_label) in batch]
                 predictions = self.predict([b_data for (b_data, _) in batch])
-                # calculate loss
-                loss = sum((pred - actual)**2 for (actual, pred) in zip([b_label for (_, b_label) in batch], predictions))
+                # calculate loss: SUM of (predicted_value - actual_value)²
+                loss = sum((pred - actual)**2 for (actual, pred) in zip(batch_labels, predictions))
                 # backpropagate
                 loss.backprop()
                 # tweak Model params
@@ -42,10 +44,13 @@ class Model(Module):
             if print_loss: 
                 print(k, loss.data)
             
-        print(f"\nSuccessfully trained model.")
+        print(f"\Finished model training.")
 
-    def predict(self, data=[]):
+    def predict(self, data):
         return [self(x) for x in data]
+    
+    def predict_one(self, one):
+        return self(one)
 
 
 class Neuron(Module):
@@ -112,6 +117,9 @@ class MLP(Model):
         # returns all parameters of each Layer in this MLP
         return [p for layer in self.layers for p in layer.parameters()]
     
-    def train(self, data, labels):
+    def train(self, data=[], labels=[], iterations=50, batch_size=None, print_loss=False):
         assert len(data[0]) == self.inputs, f"Training data must be a feature vector of size {self.inputs}, but provided data has size {len(data[0])}"
-        super().train(data, labels)
+        super().train(data, labels, iterations, batch_size, print_loss) 
+
+    def __repr__(self):
+        return f"A MLP with input layer of size {self.inputs}, hidden layers {self.hidden_layers}, and output layer of size {self.outputs}."
